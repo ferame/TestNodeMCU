@@ -79,6 +79,8 @@ uint16_t palette[] = {ILI9341_BLACK, // 0
 
 int currently_selected_button = 1;
 int currently_selected_layer = 0;
+int buttonState1 = 0;
+int buttonState2 = 0;
 // 0 - Base layer (Notify me, Contact info, Refresh)
 // 1 - Notify me layer (Anonymous, Cancel, With Uniid)
 // 2 - Motify me 2 Layer (Notification that alert was sent - Ok (timeout if not pressed, if pressed go back to Base Layer))
@@ -123,7 +125,7 @@ uint8_t foundForecasts = 0;
 void updateData();
 void drawProgress(uint8_t percentage, String text);
 void drawTime();
-void drawButtons(uint16_t layer);
+void drawButtons(int layer, int option);
 void drawCurrentWeather();
 void drawForecast();
 void drawTempChart();
@@ -206,7 +208,7 @@ void setup() {
       drawCurrentWeather();
       drawForecast();
       drawTwitter();
-      drawButtons(0);
+      drawButtons(currently_selected_layer,currently_selected_button);
       gfx.commit();
     } else {
       gfx.fillBuffer(MINI_WHITE);
@@ -218,10 +220,128 @@ void setup() {
     //Serial.println("Going to sleep");
     //ESP.deepSleep(UPDATE_INTERVAL_SECS * 1000000);
   }
+  pinMode(D0, INPUT);
+  //pinMode(A0, INPUT);
+  //pinMode(2, OUTPUT);
 }
 
 
 void loop() {
+  // read the state of the pushbutton value:
+
+  buttonState1 = digitalRead(D0);
+  buttonState2 = analogRead(A0);
+  //digitalWrite(2, LOW);
+  // check if the pushbutton is pressed. If it is, the buttonState is HIGH:
+  if (buttonState1 == HIGH) {
+    // turn LED on:
+    Serial.println("One clicked");
+    if (currently_selected_button < 2) {
+      currently_selected_button++;
+    }else{
+      currently_selected_button = 0;
+    }
+    drawButtons(currently_selected_layer,currently_selected_button);
+    Serial.println("Layer: " + String(currently_selected_layer) + "Button: " + String(currently_selected_button));
+    gfx.commit();
+    //digitalWrite(2, LOW);
+    delay(500);
+  }
+  if (buttonState2 > 1023) {
+    const char *buttons_strs [7][3] = {
+      {notify_me,contact_info,refresh}, //0
+      {anonymous,cancel,unanonymous},   //1
+      {nothing,done,nothing},           //2
+      {retry,done,nothing},             //3
+      {nothing,done,nothing},           //4
+      {notify_me,show_qr_code,nothing}, //5
+      {nothing,done,cancel}             //6
+    };
+
+    //Layer 0
+    if (currently_selected_layer == 0) {
+      if (currently_selected_button == 0) {
+        currently_selected_layer = 1;
+      }else if (currently_selected_button == 1){
+        currently_selected_layer = 5;
+      }else{
+        setup();
+      }
+    }
+    //Layer 1 {anonymous,cancel,unanonymous}
+    else if (currently_selected_layer == 1) {
+      if (currently_selected_button == 0) {
+        Serial.println("Twilio would be sent and Confirmation shown");
+      }else if (currently_selected_button == 1){
+        currently_selected_layer = 0;
+      }else{
+        currently_selected_layer = 3;
+      }
+    }
+    //Layer 2 {nothing,done,nothing}
+    else if (currently_selected_layer == 2) {
+      if (currently_selected_button == 0) {
+        Serial.println("Nothing");
+      }else if (currently_selected_button == 1){
+        Serial.println("RFID scan would initiate");
+      }else{
+        Serial.println("Nothing");
+      }
+    }
+    //Layer 3 {retry,done,nothing}
+    else if (currently_selected_layer == 3) {
+      Serial.println("RFID scan would initiate, then afterwards Twilio would be sent and Confirmation shown");
+      if (currently_selected_button == 0) {
+        Serial.println("Retry");
+      }else if (currently_selected_button == 1){
+        currently_selected_layer = 0;
+      }else{
+        Serial.println("Nothing");
+      }
+    }
+    //Layer 4 {nothing,done,nothing}
+    else if (currently_selected_layer == 4) {
+      if (currently_selected_button == 0) {
+        Serial.println("Nothing");
+      }else if (currently_selected_button == 1){
+        currently_selected_layer = 0;
+      }else{
+        Serial.println("Nothing");
+      }
+    }
+    //Layer 5 {notify_me,show_qr_code,nothing}
+    else if (currently_selected_layer == 5) {
+      if (currently_selected_button == 0) {
+        currently_selected_layer = 1;
+      }else if (currently_selected_button == 1){
+        currently_selected_layer = 6;
+      }else{
+        Serial.println("Nothing");
+      }
+    }
+    //Layer 6 {nothing,done,cancel}
+    else if (currently_selected_layer == 6) {
+      if (currently_selected_button == 0) {
+        Serial.println("Nothing");
+      }else if (currently_selected_button == 1){
+        currently_selected_layer = 0;
+      }else{
+        Serial.println("Nothing");
+      }
+    }
+    currently_selected_button = 1;
+    drawButtons(currently_selected_layer,currently_selected_button);
+    Serial.println("Another clicked");
+    gfx.commit();
+    /*if (currently_selected_layer) {
+      currently_selected_button++;
+    }else{
+      currently_selected_button = 0;
+    }*/
+    //digitalWrite(2, HIGH);
+    delay(500);
+  }
+  /*
   for (int8_t i = 0; i < 7; i++) {
     Serial.println("Drawing buttons: " + i);
     drawButtons(i);
@@ -229,7 +349,7 @@ void loop() {
     Serial.println("Screen updated, going to sleep");
     delay(5000);
     //ESP.deepSleep(UPDATE_INTERVAL_SECS * 1000000);
-  }
+  }*/
 }
 
 // Update the internet based information and update screen
@@ -507,22 +627,49 @@ void drawWifiQuality() {
 }
 
 
-void drawButtons(int layer) {
-  gfx.setColor(MINI_BLACK);
-
+void drawButtons(int layer, int option) {
   uint16_t third = SCREEN_WIDTH / 3;
+  //gfx.setColor(MINI_WHITE);
+  gfx.setTextAlignment(TEXT_ALIGN_CENTER);
+  gfx.setFont(ArialMT_Plain_10);
+  if (option == 0) {
+      gfx.setColor(MINI_BLACK);
+      gfx.fillRect(0, SCREEN_HEIGHT - 12, SCREEN_WIDTH, 12);
+      gfx.setColor(MINI_WHITE);
+      gfx.drawString(0.5 * third, SCREEN_HEIGHT - 12, buttons_strs[layer][0]);
+  }else{
+      gfx.setColor(MINI_WHITE);
+      gfx.fillRect(0, SCREEN_HEIGHT - 12, SCREEN_WIDTH, 12);
+      gfx.setColor(MINI_BLACK);
+      gfx.drawString(0.5 * third, SCREEN_HEIGHT - 12, buttons_strs[layer][0]);
+  }
+
+  if (option == 1) {
+      gfx.setColor(MINI_BLACK);
+      gfx.fillRect(third, SCREEN_HEIGHT - 12, SCREEN_WIDTH, 12);
+      gfx.setColor(MINI_WHITE);
+      gfx.drawString(1.5 * third, SCREEN_HEIGHT - 12, buttons_strs[layer][1]);
+  }else{
+      gfx.setColor(MINI_WHITE);
+      gfx.fillRect(third, SCREEN_HEIGHT - 12, SCREEN_WIDTH, 12);
+      gfx.setColor(MINI_BLACK);
+      gfx.drawString(1.5 * third, SCREEN_HEIGHT - 12, buttons_strs[layer][1]);
+  }
+
+  if (option == 2) {
+      gfx.setColor(MINI_BLACK);
+      gfx.fillRect(2*third, SCREEN_HEIGHT - 12, SCREEN_WIDTH, 12);
+      gfx.setColor(MINI_WHITE);
+      gfx.drawString(2.5 * third, SCREEN_HEIGHT - 12, buttons_strs[layer][2]);
+  }else{
+      gfx.setColor(MINI_WHITE);
+      gfx.fillRect(2*third, SCREEN_HEIGHT - 12, SCREEN_WIDTH, 12);
+      gfx.setColor(MINI_BLACK);
+      gfx.drawString(2.5 * third, SCREEN_HEIGHT - 12, buttons_strs[layer][2]);
+  }
   gfx.setColor(MINI_BLACK);
   //gfx.fillRect(0, SCREEN_HEIGHT - 12, SCREEN_WIDTH, 12);
   gfx.drawLine(0, SCREEN_HEIGHT - 12, SCREEN_WIDTH, SCREEN_HEIGHT - 12);
   gfx.drawLine(2 * (third/2), SCREEN_HEIGHT - 12, 2 * (third/2), SCREEN_HEIGHT);//button separator 1
   gfx.drawLine(2 * third, SCREEN_HEIGHT - 12, 2 * third, SCREEN_HEIGHT);//button separator 2
-  gfx.setTextAlignment(TEXT_ALIGN_CENTER);
-  gfx.setFont(ArialMT_Plain_10);
-  //gfx.drawString(0.5 * third, SCREEN_HEIGHT - 12, FPSTR(TEXT_CONFIG_BUTTON));
-  gfx.drawString(0.5 * third, SCREEN_HEIGHT - 12, buttons_strs[layer][0]);
-  gfx.drawString(1.5 * third, SCREEN_HEIGHT - 12, buttons_strs[layer][1]);
-  gfx.fillRect((SCREEN_WIDTH/3)*2, SCREEN_HEIGHT - 12, SCREEN_WIDTH, 12);
-  gfx.setColor(MINI_WHITE);
-  //gfx.drawString(2.5 * third, SCREEN_HEIGHT - 12, FPSTR(TEXT_REFRESH_BUTTON));
-  gfx.drawString(2.5 * third, SCREEN_HEIGHT - 12, buttons_strs[layer][2]);
 }
