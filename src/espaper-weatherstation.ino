@@ -75,8 +75,11 @@ uint16_t palette[] = {ILI9341_BLACK, // 0
 #define SCREEN_WIDTH 296
 #define BITS_PER_PIXEL 1
 
+//Interface time variables
+unsigned long previousMillis = 0;
+unsigned long currentMillis;
+const unsigned long interval = 10000;
 //Button variables
-
 int currently_selected_button = 1;
 int currently_selected_layer = 0;
 int buttonState1 = 0;
@@ -248,18 +251,9 @@ void loop() {
     delay(500);
   }
   if (buttonState2 > 1023) {
-    const char *buttons_strs [7][3] = {
-      {notify_me,contact_info,refresh}, //0
-      {anonymous,cancel,unanonymous},   //1
-      {nothing,done,nothing},           //2
-      {retry,done,nothing},             //3
-      {nothing,done,nothing},           //4
-      {notify_me,show_qr_code,nothing}, //5
-      {nothing,done,cancel}             //6
-    };
-
     //Layer 0
     if (currently_selected_layer == 0) {
+      Serial.println("LAYER 0");
       if (currently_selected_button == 0) {
         currently_selected_layer = 1;
       }else if (currently_selected_button == 1){
@@ -270,16 +264,20 @@ void loop() {
     }
     //Layer 1 {anonymous,cancel,unanonymous}
     else if (currently_selected_layer == 1) {
+      Serial.println("LAYER 1");
       if (currently_selected_button == 0) {
         Serial.println("Twilio would be sent and Confirmation shown");
       }else if (currently_selected_button == 1){
         currently_selected_layer = 0;
       }else{
         currently_selected_layer = 3;
+        previousMillis = millis();
+        Serial.println("Millis start to count");
       }
     }
     //Layer 2 {nothing,done,nothing}
     else if (currently_selected_layer == 2) {
+      Serial.println("LAYER 2");
       if (currently_selected_button == 0) {
         Serial.println("Nothing");
       }else if (currently_selected_button == 1){
@@ -290,6 +288,7 @@ void loop() {
     }
     //Layer 3 {retry,done,nothing}
     else if (currently_selected_layer == 3) {
+      Serial.println("LAYER 3");
       Serial.println("RFID scan would initiate, then afterwards Twilio would be sent and Confirmation shown");
       if (currently_selected_button == 0) {
         Serial.println("Retry");
@@ -301,6 +300,7 @@ void loop() {
     }
     //Layer 4 {nothing,done,nothing}
     else if (currently_selected_layer == 4) {
+      Serial.println("LAYER 4");
       if (currently_selected_button == 0) {
         Serial.println("Nothing");
       }else if (currently_selected_button == 1){
@@ -311,6 +311,7 @@ void loop() {
     }
     //Layer 5 {notify_me,show_qr_code,nothing}
     else if (currently_selected_layer == 5) {
+      Serial.println("LAYER 5");
       if (currently_selected_button == 0) {
         currently_selected_layer = 1;
       }else if (currently_selected_button == 1){
@@ -321,6 +322,7 @@ void loop() {
     }
     //Layer 6 {nothing,done,cancel}
     else if (currently_selected_layer == 6) {
+      Serial.println("LAYER 6");
       if (currently_selected_button == 0) {
         Serial.println("Nothing");
       }else if (currently_selected_button == 1){
@@ -341,6 +343,17 @@ void loop() {
     //digitalWrite(2, HIGH);
     delay(500);
   }
+
+  currentMillis = millis();
+  if(currentMillis - previousMillis >= interval && previousMillis != 0){
+    Serial.println("This is correct");
+    currently_selected_button = 1;
+    currently_selected_layer = 0;
+    drawButtons(currently_selected_layer,currently_selected_button);
+    gfx.commit();
+    previousMillis = 0;
+  }
+
   /*
   for (int8_t i = 0; i < 7; i++) {
     Serial.println("Drawing buttons: " + i);
