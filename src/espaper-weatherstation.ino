@@ -40,8 +40,14 @@ See more at https://blog.squix.org
    - ESP8266 WeatherStation by Daniel Eichhorn
    - Json Streaming Parser by Daniel Eichhorn
    - simpleDSTadjust by neptune2
- ***/ nodemcu Bluetooth detect beacon, qr codes scanning with rpi, documenting api requirements, summary of device logic., 13:00 lt laiku
-
+ ***/ //nodemcu Bluetooth detect beacon, qr codes scanning with rpi, documenting api requirements, summary of device logic., 13:00 lt laiku
+// NodeMCU does not have an internal bluetooth module. As a result, an external module, such as HC-05 would be required (7 pounds).
+// QR codes scanning with Raspberry PI - https://slackhacker.com/2016/09/12/effective-qr-scanning-with-the-raspberry-pi-and-camera-module/
+//  Any camera module is suitable, as long as the focus distance is optimal.
+//  Processing of the picture captured is done by using Z-Bar libraries and tools. Possible issue - not as quick response as the industry offered alternatives.
+// Android library generating QR code - https://github.com/kenglxn/QRGen - Generating some secret key every time for Authentication, in combination with usual credentials.
+// iOS library generating QR code - https://github.com/aschuch/QRCode
+//
 #include <JsonListener.h>
 #include <OpenWeatherMapCurrent.h>
 #include <OpenWeatherMapForecast.h>
