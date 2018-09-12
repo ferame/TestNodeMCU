@@ -40,7 +40,7 @@ See more at https://blog.squix.org
    - ESP8266 WeatherStation by Daniel Eichhorn
    - Json Streaming Parser by Daniel Eichhorn
    - simpleDSTadjust by neptune2
- ***/
+ ***/ nodemcu Bluetooth detect beacon, qr codes scanning with rpi, documenting api requirements, summary of device logic., 13:00 lt laiku
 
 #include <JsonListener.h>
 #include <OpenWeatherMapCurrent.h>
@@ -49,8 +49,6 @@ See more at https://blog.squix.org
 #include <MiniGrafx.h>
 #include <EPD_WaveShare.h>
 
-
-
 #include "ArialRounded.h"
 #include <MiniGrafxFonts.h>
 #include "moonphases.h"
@@ -58,7 +56,13 @@ See more at https://blog.squix.org
 #include "twitter.h"
 #include "configportal.h"
 
+#include <MFRC522.h>
 
+#define RST_PIN         D1          // Configurable, see typical pin layout above
+#define SS_PIN          D8         // Configurable, see typical pin layout above
+
+MFRC522 rfid(SS_PIN, RST_PIN);  // Create MFRC522 instance
+byte nuidPICC[4];
 
 #define MINI_BLACK 0
 #define MINI_WHITE 1
@@ -78,7 +82,7 @@ uint16_t palette[] = {ILI9341_BLACK, // 0
 //Interface time variables
 unsigned long previousMillis = 0;
 unsigned long currentMillis;
-const unsigned long interval = 10000;
+const unsigned long interval = 50000;
 //Button variables
 int currently_selected_button = 1;
 int currently_selected_layer = 0;
@@ -224,14 +228,20 @@ void setup() {
     //ESP.deepSleep(UPDATE_INTERVAL_SECS * 1000000);
   }
   pinMode(D0, INPUT);
+  while (!Serial);		// Do nothing if no serial port is opened (added for Arduinos based on ATMEGA32U4)
+	 SPI.begin();			// Init SPI bus
+	rfid.PCD_Init();		// Init MFRC522
+  rfid.PCD_DumpVersionToSerial();
   //pinMode(A0, INPUT);
   //pinMode(2, OUTPUT);
 }
-
-
+/*
+void loop(){
+  readRFID();
+  //delay(500);
+}*/
 void loop() {
   // read the state of the pushbutton value:
-
   buttonState1 = digitalRead(D0);
   buttonState2 = analogRead(A0);
   //digitalWrite(2, LOW);
@@ -353,6 +363,10 @@ void loop() {
     gfx.commit();
     previousMillis = 0;
   }
+  //if (currently_selected_layer == 3) {
+    //readRFID();
+    //delay(200);
+  //}
 
   /*
   for (int8_t i = 0; i < 7; i++) {
@@ -580,14 +594,67 @@ void drawTwitter(){
     if (httpCode > 0) { //Check the returning code
 
       String payload = http.getString();   //Get the request response payload
-      Serial.println(payload);                     //Print the response payload
+      Serial.println("Twitter update:" + payload);                     //Print the response payload
       //gfx.drawString(55, 69, "ABCDEFGHIJKLMNOPQRSTUVWXYZ");
       //gfx.drawStringMaxWidth(55, 69, 241, payload);
-      gfx.drawStringMaxWidth(5, 69, 291, payload);
+      gfx.drawStringMaxWidth(5, 69, 291, "Twitter update:" + payload);
     }
 
     http.end();   //Close connection
   }
+}
+
+void readRFID(){
+    // Look for new cards
+    if ( ! rfid.PICC_IsNewCardPresent())
+    {
+      return;
+    }
+    // Select one of the cards
+    if ( ! rfid.PICC_ReadCardSerial())
+    {
+      return;
+    }
+    rfid.PICC_DumpToSerial(&(rfid.uid));
+    //Show UID on serial monitor
+    Serial.print("UID tag :");
+    String content= "";
+    byte letter;
+    for (byte i = 0; i < rfid.uid.size; i++)
+    {
+       Serial.print(rfid.uid.uidByte[i] < 0x10 ? " 0" : " ");
+       Serial.print(rfid.uid.uidByte[i], HEX);
+       content.concat(String(rfid.uid.uidByte[i] < 0x10 ? " 0" : " "));
+       content.concat(String(rfid.uid.uidByte[i], HEX));
+    }
+    Serial.println();
+    Serial.print("Message : ");
+    content.toUpperCase();
+    content = content.substring(1);
+    //Serial.println("AM I a happy person?START" + content.substring(1) + "END");
+    confirmAttendance(content);
+}
+
+void confirmAttendance(String NUID){
+   if(WiFi.status()== WL_CONNECTED){   //Check WiFi connection status
+     HTTPClient http;    //Declare object of class HTTPClient
+
+     http.begin("http://tweety.gq/APIRequests.php");      //Specify request destination
+     http.addHeader("Content-Type", "text/plain");  //Specify content-type header
+
+     String textSend = "Crd:" + NUID + "Node_1";
+     //String textSend = "Crd:" + NUID + "Node_2";
+     int httpCode = http.POST(textSend);   //Send the request
+     //String payload = http.getString();                  //Get the response payload
+     String toPrint = "Card read: " + http.getString();
+     Serial.println(httpCode);   //Print HTTP return code
+     Serial.println(toPrint);    //Print request response payload
+     http.end();  //Close connection
+     gfx.drawStringMaxWidth(5, 69, 291, toPrint);
+     delay(3000);
+   }else{
+      Serial.println("Error in WiFi connection");
+   }
 }
 
 void drawBattery() {
