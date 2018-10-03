@@ -94,6 +94,7 @@ int currently_selected_button = 1;
 int currently_selected_layer = 0;
 int buttonState1 = 0;
 int buttonState2 = 0;
+
 // 0 - Base layer (Notify me, Contact info, Refresh)
 // 1 - Notify me layer (Anonymous, Cancel, With Uniid)
 // 2 - Motify me 2 Layer (Notification that alert was sent - Ok (timeout if not pressed, if pressed go back to Base Layer))
@@ -101,6 +102,17 @@ int buttonState2 = 0;
 // 4 - Notify me 4 Layer (Notification that alert was sent, with name and surname of sender mentioned - Ok (timeout if not pressed, if pressed go back to Base Layer))
 // 5 - Contact info Layer (Notify Me / Show QR code / Cancel) (Show contact details of owner, along with QR code maybe as another layer)
 // 6 - Contact info 2 Layer (Done (brings to 5), Cancel (brings to 0))
+
+//New layer
+// 0 - Base Layer 0 (Notify Me, Contact Info, Refresh)
+// 1 - Notify me Layer 1 (Anonymously, With UniID, Cancel)
+// 2 - Contact Info Layer 1 (QR Code, Done, - )
+// 3 - Anonymously "Success" Layer 2 ( - , Main menu, - )
+// 4 - Anonymously "Failure" Layer 2 (Retry, Main menu, - )
+// 5 - With UniID Layer 2 ( - , Main menu, - )
+// 6 - QR Code Layer 2 (Back, Main menu, - )
+// 7 - Card Tapped "Success" Layer 3 ( - , Main menu, - )
+// 8 - Card Tapped "Failure" Layer 3 (Retry, Main menu, - )
 
 char *notify_me = "NOTIFY ME";
 char *contact_info = "CONTACT INFO";
@@ -203,12 +215,12 @@ void setup() {
   }
   loadConfig();
 
-  /*Serial.println("State: " + String(btnState));
+  Serial.println("State: " + String(btnState));
   if (btnState == HIGH) {
     boolean connected = connectWifi();
     Serial.println("Button LOW...");
     startConfigPortal(&gfx);
-  } else {*/
+  } else {
     boolean connected = connectWifi();
     Serial.println("Button HIGH...");
     if (connected) {
@@ -229,17 +241,18 @@ void setup() {
       gfx.setTextAlignment(TEXT_ALIGN_CENTER);
       gfx.drawString(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 - 30, "Could not connect to WiFi\nPress LEFT + RIGHT button\nto enter config mode");
       gfx.commit();
-    //}
-    //Serial.println("Going to sleep");
-    //ESP.deepSleep(UPDATE_INTERVAL_SECS * 1000000);
+      //}
+      //Serial.println("Going to sleep");
+      //ESP.deepSleep(UPDATE_INTERVAL_SECS * 1000000);
+    }
+    pinMode(D0, INPUT);
+    while (!Serial);		// Do nothing if no serial port is opened (added for Arduinos based on ATMEGA32U4)
+  	 SPI.begin();			// Init SPI bus
+  	rfid.PCD_Init();		// Init MFRC522
+    rfid.PCD_DumpVersionToSerial();
+    //pinMode(A0, INPUT);
+    //pinMode(2, OUTPUT);
   }
-  pinMode(D0, INPUT);
-  while (!Serial);		// Do nothing if no serial port is opened (added for Arduinos based on ATMEGA32U4)
-	 SPI.begin();			// Init SPI bus
-	rfid.PCD_Init();		// Init MFRC522
-  rfid.PCD_DumpVersionToSerial();
-  //pinMode(A0, INPUT);
-  //pinMode(2, OUTPUT);
 }
 /*
 void loop(){
@@ -416,7 +429,7 @@ void updateData() {
     delay(100);
   }
 
-  dstOffset = UTC_OFFSET * 3600 + dstAdjusted.time(nullptr) - time(nullptr);
+  /*dstOffset = UTC_OFFSET * 3600 + dstAdjusted.time(nullptr) - time(nullptr);
 
   Astronomy *astronomy = new Astronomy();
   time_t now = time(nullptr) + dstOffset;
@@ -426,7 +439,7 @@ void updateData() {
   uint8_t moonAge = moonData.phase <= 4 ? lunarMonth * moonData.illumination / 2 : lunarMonth - moonData.illumination * lunarMonth / 2;
   moonAgeImage = String((char) (65 + ((uint8_t) ((26 * moonAge / 30) % 26))));
   delete astronomy;
-  astronomy = nullptr;
+  astronomy = nullptr;*/
 }
 
 // draws the clock

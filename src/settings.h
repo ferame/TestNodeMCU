@@ -28,8 +28,10 @@ See more at http://blog.squix.ch
 const String CONFIG_SSID = "ESPaperConfig";
 
 // Setup
-String WIFI_SSID = "TEO-812776";
-String WIFI_PASS = "slaptazodis";
+//String WIFI_SSID = "TEO-812776";
+String WIFI_SSID = "Madone";
+//String WIFI_PASS = "slaptazodis";
+String WIFI_PASS = "Cambodia.2003";
 
 //const int UPDATE_INTERVAL_SECS = 20 * 60; // Update every 20 minutes
 const int UPDATE_INTERVAL_SECS = 10; //10s
